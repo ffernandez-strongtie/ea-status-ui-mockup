@@ -195,8 +195,15 @@ function useQueryValue(name) {
   return value;
 }
 
+const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+
+function withBase(to) {
+  return to.startsWith("/") && BASE && !to.startsWith(`${BASE}/`) ? `${BASE}${to}` : to;
+}
+
 function normalizePath(pathname) {
-  const { pathname: nextPathname } = new URL(pathname || "/", window.location.origin);
+  let { pathname: nextPathname } = new URL(pathname || "/", window.location.origin);
+  if (BASE && (nextPathname === BASE || nextPathname.startsWith(`${BASE}/`))) nextPathname = nextPathname.slice(BASE.length) || "/";
   if (!nextPathname || nextPathname === "/") return "/index.html";
   if (nextPathname.endsWith("/")) return `${nextPathname.slice(0, -1)}.html`;
   if (!nextPathname.endsWith(".html")) return `${nextPathname}.html`;
@@ -204,7 +211,7 @@ function normalizePath(pathname) {
 }
 
 function navigate(to) {
-  const nextUrl = new URL(to, window.location.origin);
+  const nextUrl = new URL(withBase(to), window.location.origin);
   if (window.location.pathname === nextUrl.pathname && window.location.search === nextUrl.search) return;
   window.history.pushState({}, "", `${nextUrl.pathname}${nextUrl.search}${nextUrl.hash}`);
   window.dispatchEvent(new PopStateEvent("popstate"));
@@ -214,7 +221,7 @@ function navigate(to) {
 function AppLink({ to, currentPath, className = "", children }) {
   return (
     <a
-      href={to}
+      href={withBase(to)}
       className={className}
       aria-current={normalizePath(to) === currentPath ? "page" : undefined}
       onClick={(event) => {
